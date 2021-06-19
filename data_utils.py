@@ -2,6 +2,10 @@ import numpy as np
 from numpy.lib.stride_tricks import as_strided
 import librosa
 import librosa.display
+import math
+import raga_feature
+from pydub import AudioSegment
+from resampy import resample
 
 
 def audio_2_frames(audio, config):
@@ -70,9 +74,37 @@ def get_hist_cqt(audio, pitches):
     pitches_std = np.std(pitches, 0)
     cqt_mean = np.mean(cqt, 0)
     cqt_std = np.std(cqt, 0)
-    hist_cqt = np.stack([pitches_mean, pitches_std, cqt_mean, cqt_std],-1)
+    cqt_mean = np.roll(cqt_mean, 3, axis=-1)
+    cqt_std = np.roll(cqt_std, 3, axis=-1)
+    hist_cqt = np.stack([stadardize(pitches_mean), stadardize(pitches_std), stadardize(cqt_mean), stadardize(cqt_std)],-1)
     hist_cqt = np.expand_dims(hist_cqt,0)
     return hist_cqt
+
+def get_raga_feat(pitches):
+    return raga_feature.get_raga_feat(pitches)
+
+def freq_to_cents(freq, std=25):
+    frequency_reference = 10
+    c_true = 1200 * math.log(freq / frequency_reference, 2)
+
+    cents_mapping = np.linspace(0, 7180, 360) + 1997.3794084376191
+    target = np.exp(-(cents_mapping - c_true) ** 2 / (2 * std ** 2))
+    return target
+
+def mp3_to_wav(mp3_path):
+
+    a = AudioSegment.from_mp3(mp3_path)
+    y = np.array(a.get_array_of_samples())
+
+    if a.channels == 2:
+        y = y.reshape((-1, 2))
+        y = y.mean(1)
+    y = np.float32(y) / 2 ** 15
+
+    y = resample(y, a.frame_rate, 16000)
+    return y
+
+
 
 
 
