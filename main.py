@@ -20,7 +20,7 @@ def predict_run_time(crepe, cretora_hindustani, cretora_carnatic, tradition='h',
         if tonic is None:
             print('Predicted Tonic: {} and Raga: {}'.format(pred_tonic, pred_raga))
         else:
-            print('Predicted Raga: {}'.format(pred_tonic, pred_raga))
+            print('Predicted Raga: {}'.format(pred_raga))
 
 def predict_on_file(crepe, cretora, file_path):
     split_tup = os.path.splitext(file_path)
