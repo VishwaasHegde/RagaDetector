@@ -13,7 +13,7 @@ Install the requirements by running `pip install -r requirements.txt`
 
 ## Model
 1. Create an empty folder called `model` and place it in CRETORA folder
-2. Download the models (model-full.h5, hindustani_tonic_model.hdf5 hindustani_raga_model.hdf5, carnatic_tonic_model.hdf5 carnatic_raga_model.hdf5) from [here](https://drive.google.com/drive/u/0/folders/1n5u8jHsFUET2krAj1JDAT1dwjMLKA6mT) and place them in models folder 
+2. Download the models (model-full.h5, hindustani_tonic_model.hdf5 hindustani_raga_model.hdf5, carnatic_tonic_model.hdf5 carnatic_raga_model.hdf5) from [here](https://drive.google.com/drive/folders/19STQr260dZyZI_AhJmun4UV2lWwGwp-m?usp=sharing) and place them in models folder 
 
 ## Data
 1. I dont have the permisssion to upload the datasets, the datasets has to be obtained by request from here: https://compmusic.upf.edu/node/328
