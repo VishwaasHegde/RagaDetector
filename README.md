@@ -39,6 +39,14 @@ Steps to run:
 3. The model supports wav and mp3 file, with mp3 there will be a delay in converting into wav format internally
 4. After this the raga label and the tonic frequency is outputted
 
+### Hindustani Raga Embedding cosine similarity obtained from the model
+
+![alt text](https://github.com/VishwaasHegde/CRETORA/blob/main/images/hindustani_weights.png)
+
+### Carnatic Raga Embedding cosine similarity obtained from the model
+
+![alt text](https://github.com/VishwaasHegde/CRETORA/blob/main/images/carnatic_weights.png)
+
 Acknowledgments:
 1. The model uses [CREPE](https://github.com/marl/crepe) to find the pitches for the audio, I would like to thank [Jong Wook](https://github.com/jongwook) for clarifiying my questions
 2. Also thank [CompMusic](https://compmusic.upf.edu/node/328) and Sankalp Gulati for providing me the datasets
