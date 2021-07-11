@@ -40,7 +40,7 @@ Steps to run:
 4. After this the raga label and the tonic frequency is outputted
 
 Demo videos:
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/GC1MyaENUOc&ab_channel=VishwaasHegde/0.jpg)](https://www.youtube.com/watch?v=GC1MyaENUOc&ab_channel=VishwaasHegde)
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/GC1MyaENUOc/0.jpg)](https://www.youtube.com/watch?v=GC1MyaENUOc)
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/K4Kv_Pypk1w/0.jpg)](https://www.youtube.com/watch?v=K4Kv_Pypk1w)
 
