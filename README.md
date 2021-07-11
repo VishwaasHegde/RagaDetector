@@ -40,7 +40,15 @@ Steps to run:
 4. After this the raga label and the tonic frequency is outputted
 
 Demo videos:
+
+## Live Raga Prediction for Raga: Miyan Malhar
+
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/GC1MyaENUOc/0.jpg)](https://www.youtube.com/watch?v=GC1MyaENUOc)
+
+
+## Live Raga Prediction for Raga: Des
+
+(Click will redirect to youtube)
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/K4Kv_Pypk1w/0.jpg)](https://www.youtube.com/watch?v=K4Kv_Pypk1w)
 
