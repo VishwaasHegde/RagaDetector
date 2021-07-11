@@ -22,7 +22,7 @@ Install the requirements by running `pip install -r requirements.txt`
 E2ERaga supports audio samples which can be recorded at runtime
 
 Steps to run:
-1. Run the command `python test_sample.py --runtime=True --tradition=h --duration=30` 
+1. Run the command `python main.py --runtime=True --tradition=h --duration=30` 
 2. You can change the tradition (hindustani or carnatic) by choosing h/c and duration to record in seconds
 3. Once you run this command, there will be a prompt - `Press 1 to start recording or press 0 to exit:`
 4. Enter accordingly and start recording for `duration` duration
