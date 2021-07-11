@@ -39,6 +39,12 @@ Steps to run:
 3. The model supports wav and mp3 file, with mp3 there will be a delay in converting into wav format internally
 4. After this the raga label and the tonic frequency is outputted
 
+Demo videos:
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/GC1MyaENUOc&ab_channel=VishwaasHegde/0.jpg)](https://www.youtube.com/watch?v=GC1MyaENUOc&ab_channel=VishwaasHegde)
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/K4Kv_Pypk1w/0.jpg)](https://www.youtube.com/watch?v=K4Kv_Pypk1w)
+
+
 ### Hindustani Raga Embedding cosine similarity obtained from the model
 
 ![alt text](https://github.com/VishwaasHegde/CRETORA/blob/main/images/hindustani_weights.png)
