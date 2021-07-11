@@ -33,7 +33,7 @@ Steps to run:
 E2ERaga supports recorded audio samples which can be provided at runtime
 
 Steps to run:
-1. Run the command `python test_sample.py --runtime_file=<audio_file_path> --tradition=<h/c>`
+1. Run the command `python main.py --runtime_file=<audio_file_path> --tradition=<h/c>`
    
    Example: `python test_sample.py --runtime_file=data/sample_data/Ahira_bhairav_27.wav --tradition=h`
 3. The model supports wav and mp3 file, with mp3 there will be a delay in converting into wav format internally
