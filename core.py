@@ -18,6 +18,8 @@ import pandas as pd
 from pydub import AudioSegment
 from resampy import resample
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+import pickle
+
 models = {
     'tiny': None,
     'small': None,
@@ -51,6 +53,7 @@ class CRePE:
         # pitch_model.load_weights('model/model-full.h5', by_name=True)
         self.pitch_model = pitch_model
         self.pitch_config = pitch_config
+
 
 
     def build_model(self, config):
@@ -159,15 +162,14 @@ class CreToRa:
                 self.tonic_model = self.build_and_load_model(tonic_config, 'tonic', tradition)
                 self.tonic_model.load_weights('model/{}_tonic_model.hdf5'.format(tradition))
 
-        self.graph_raga = tf.Graph()
-        self.sess_raga = tf.compat.v1.Session(graph=self.graph_raga)
-        with self.sess_raga.as_default():
-            with self.graph_raga.as_default():
-                raga_config = pyhocon.ConfigFactory.parse_file("experiments.conf")['raga']
-                self.raga_model = self.build_and_load_model(raga_config, 'raga', tradition)
-                self.raga_model.load_weights('model/{}_raga_model.hdf5'.format(tradition))
-                self.tradition = tradition
-                self.raga_list = self.get_raga_list(raga_config, tradition)
+        if tradition=='hindustani':
+            self.indices = {0: 4, 5: 2, 11: 1, 14: 3, 7: 1, 19:1}
+        else:
+            self.indices = {0: 4, 5: 2, 11: 1, 14: 3, 19: 1}
+
+        raga_config = pyhocon.ConfigFactory.parse_file("experiments.conf")['raga']
+        self.raga_list = self.get_raga_list(raga_config, tradition)
+        self.knn_models = self.build_and_load_model(raga_config, 'raga', tradition)
 
 
     def build_and_load_model(self, config, task, tradition):
@@ -205,16 +207,11 @@ class CreToRa:
             return tonic_model
 
         elif task == 'raga':
-            raga_feature_batch = Input(shape=(12, 12, 60, 4), name='raga_feature_input', dtype='float32')
-            raga_feat = raga_feature_batch[0]
-            raga_emb = self.get_raga_emb(raga_feat, note_dim)
-            n_labels = config[tradition + '_n_labels']
-            raga_logits = Dense(n_labels, activation='softmax', name='raga')(raga_emb)
-            cce = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.0)
-            rag_model = Model(inputs=[raga_feature_batch], outputs=[raga_logits])
-            rag_model.compile(loss={'raga': cce},
-                          optimizer='adam', metrics={'raga': 'accuracy'})
-            return rag_model
+            knn_models = {}
+            for k,v in self.indices.items():
+                with open('model/{}/knn_{}_{}.pkl'.format(tradition,tradition,k), 'rb') as f:
+                    knn_models[k] = pickle.load(f)
+            return knn_models
 
     def get_hist_emb(self, hist_cqt, note_dim, indices, topk, drop_rate=0.2):
         # hist_cc = [tf.cast(self.standardize(h), tf.float32) for h in hist_cqt]
@@ -351,12 +348,24 @@ class CreToRa:
 
         pitches = np.roll(pitches, -tonic, axis=2)
 
-        raga_feat = data_utils.get_raga_feat(pitches[0])
-        with self.sess_raga.as_default():
-            with self.graph_raga.as_default():
-                pred_raga = self.raga_model.predict(np.array([raga_feat]))[0]
-                print("Raga Prediction Complete")
-        pred_raga = np.argmax(pred_raga)
+        pred_raga = 0
+        for k,v in self.indices.items():
+            knn_model = self.knn_models[k]
+            feat = np.zeros([12,60,2])
+            if k==0:
+                feat = data_utils.get_histogram(pitches[0])
+            elif k < 12:
+                raga_feat = data_utils.get_raga_feat(pitches[0],k,True)
+                for t in range(12):
+                    feat[t] = raga_feat[t, (t + k) % 12, :, :]
+            else:
+                raga_feat = data_utils.get_raga_feat(pitches[0],k,False)
+                feat = np.concatenate([raga_feat[k - 12, :k - 12, :, :], raga_feat[k - 12, k - 12 + 1:, :, :]], axis=0)
+
+            pr = v*knn_model.predict_proba(feat.reshape(1,-1))
+            pred_raga+=pr
+
+        pred_raga = np.argmax(pred_raga[0])
         pred_raga = self.raga_list[pred_raga]
 
         return tonic_12, pred_raga
@@ -373,10 +382,7 @@ class CreToRa:
         cents = data_utils.to_local_average_cents(p)
         frequency = 10 * 2 ** (cents / 1200)
         print('tonic: {}'.format(frequency[0]))
-
-
         p = raga_model.predict(hist_cqt)
-
         print('tonic: {}'.format(frequency[0]))
 
 
