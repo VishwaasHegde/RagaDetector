@@ -4,7 +4,8 @@ import os
 import data_utils
 from scipy.io import wavfile
 import argparse
-
+import numpy as np
+import math
 
 def predict_run_time(crepe, cretora_hindustani, cretora_carnatic, tradition='h', tonic=None, seconds=60):
     while True:
@@ -39,6 +40,21 @@ def predict_on_file(crepe, cretora, file_path):
     pred_tonic, pred_raga = cretora.predict_tonic_raga(audio, pitches, None)
 
     print('Predicted Tonic: {} and Raga: {}'.format(pred_tonic, pred_raga))
+
+
+def bhatta(hist1, hist2):
+    # calculate mean of hist1
+    h1_ = np.mean(hist1)
+    h2_ = np.mean(hist2)
+    # calculate mean of hist2
+
+    # calculate score
+    score = np.sum(np.sqrt(np.multiply(hist1, hist2)))
+    # print h1_,h2_,score;
+    #     print(score)
+    t = 1 / (math.sqrt(h1_ * h2_ * len(hist1) * len(hist2)) + 0.0000001)
+    score = math.sqrt(1 - (t) * score)
+    return score
 
 if __name__ == '__main__':
 
