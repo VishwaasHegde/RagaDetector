@@ -1,4 +1,4 @@
-# CRETORA
+# Sequential Pitch Distributions For Raga Detection Using KNN
 This repository contains code for an end to end model for raga and tonic identification on audio samples
 
 Note: This repository currently only contains inference code, the training code and lots of experimental code can be accessed here: https://github.com/VishwaasHegde/E2ERaga
