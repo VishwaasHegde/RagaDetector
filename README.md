@@ -12,8 +12,12 @@ Download and install [Anaconda](https://www.anaconda.com/products/individual) fo
 Install the requirements by running `pip install -r requirements.txt`
 
 ## Model
-1. Create an empty folder called `model` and place it in CRETORA folder
-2. Download the models (model-full.h5, hindustani_tonic_model.hdf5 hindustani_raga_model.hdf5, carnatic_tonic_model.hdf5 carnatic_raga_model.hdf5) from [here](https://drive.google.com/drive/folders/19STQr260dZyZI_AhJmun4UV2lWwGwp-m?usp=sharing) and place them in models folder 
+1. Create an empty folder called `model` and place it in SPD_KNN folder
+2. Download the pitch model from [here](https://drive.google.com/file/d/1On0sbDARW6uVvfVQ6IJkhWtUaaH1fBw8/view?usp=sharing) and place it in the 'model' folder
+3.  Download the tonic models (Hindustani and Carnatic) from [here](https://drive.google.com/drive/folders/1h7dois2zZMLBcx7gl-_0phlILzOUvL8q?usp=sharing) and place it in the 'model' folder
+4. Download the Carnatic raga models from [here](https://drive.google.com/drive/folders/1OXGknLkShVFQSCZkcIfdIl5eYeCN9T9E?usp=sharing) and place it in 'data\RagaDataset\Carnatic\model' (create empty folders if you need)
+5. Download the Hindustani raga models from [here](https://drive.google.com/drive/folders/14OMUyhbA2sw2rD6y1-cMINreo-S-GaiE?usp=sharing) and place it in 'data\RagaDataset\Hindustani\model' (create empty folders if you need)
+ 
 
 ## Data
 1. I dont have the permisssion to upload the datasets, the datasets has to be obtained by request from here: https://compmusic.upf.edu/node/328
