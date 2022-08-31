@@ -1,4 +1,4 @@
-from core import CRePE, CreToRa
+from core import CRePE, SPD_Model
 import recorder
 import os
 import data_utils
@@ -6,6 +6,7 @@ from scipy.io import wavfile
 import argparse
 import numpy as np
 import math
+from sklearn.neighbors import KNeighborsClassifier
 
 def predict_run_time(crepe, cretora_hindustani, cretora_carnatic, tradition='h', tonic=None, seconds=60):
     while True:
@@ -14,16 +15,16 @@ def predict_run_time(crepe, cretora_hindustani, cretora_carnatic, tradition='h',
             return
         pitches = crepe.predict_pitches(audio)
         if tradition=='h':
-            pred_tonic, pred_raga = cretora_hindustani.predict_tonic_raga(audio, pitches, tonic)
+            pred_tonic, pred_raga = cretora_hindustani.predict_tonic_raga(crepe, audio, pitches, tonic)
         else:
-            pred_tonic, pred_raga = cretora_carnatic.predict_tonic_raga(audio, pitches, tonic)
+            pred_tonic, pred_raga = cretora_carnatic.predict_tonic_raga(crepe, audio, pitches, tonic)
 
         if tonic is None:
             print('Predicted Tonic: {} and Raga: {}'.format(pred_tonic, pred_raga))
         else:
             print('Predicted Raga: {}'.format(pred_raga))
 
-def predict_on_file(crepe, cretora, file_path):
+def predict_on_file(crepe, cretora, file_path, tonic):
     split_tup = os.path.splitext(file_path)
 
     if split_tup[1] == '.mp3':
@@ -37,7 +38,7 @@ def predict_on_file(crepe, cretora, file_path):
     print("Pitch Prediction Complete")
 
     # pitches = crepe.predict_pitches(audio)
-    pred_tonic, pred_raga = cretora.predict_tonic_raga(audio, pitches, None)
+    pred_tonic, pred_raga = cretora.predict_tonic_raga(crepe, audio, pitches, tonic)
 
     print('Predicted Tonic: {} and Raga: {}'.format(pred_tonic, pred_raga))
 
@@ -55,6 +56,31 @@ def bhatta(hist1, hist2):
     t = 1 / (math.sqrt(h1_ * h2_ * len(hist1) * len(hist2)) + 0.0000001)
     score = math.sqrt(1 - (t) * score)
     return score
+
+
+class SPDKNN:
+    def __init__(self, k=5):
+        self.y = None
+        self.knn = KNeighborsClassifier(n_neighbors=k, algorithm='ball_tree', metric=self.bhatta)
+        self.wd = wd
+
+    def bhatta(self, hist1, hist2):
+        # calculate mean of hist1
+        h1_ = np.mean(hist1)
+        h2_ = np.mean(hist2)
+        # calculate mean of hist2
+
+        # calculate score
+        score = np.sum(np.sqrt(np.multiply(hist1, hist2)))
+        # print h1_,h2_,score;
+        score = math.sqrt(1 - (1 / math.sqrt(h1_ * h2_ * len(hist1) * len(hist2))) * score);
+        return score
+
+    def fit(self, X, y):
+        self.knn.fit(X, y)
+
+    def predict(self, X):
+        return self.knn.predict_proba(X)
 
 if __name__ == '__main__':
 
@@ -81,14 +107,14 @@ if __name__ == '__main__':
     crepe = CRePE()
 
     if p_args.runtime:
-        cretora_hindustani = CreToRa('hindustani')
-        cretora_carnatic= CreToRa('carnatic')
+        cretora_hindustani = SPD_Model('Hindustani')
+        cretora_carnatic= SPD_Model('Hindustani')
         predict_run_time(crepe, cretora_hindustani, cretora_carnatic,
                          tradition=p_args.tradition, tonic=p_args.tonic, seconds=int(p_args.duration))
 
     elif p_args.runtime_file:
         if p_args.tradition == 'h':
-            cretora = CreToRa('hindustani')
+            cretora = SPD_Model('Hindustani')
         else:
-            cretora = CreToRa('carnatic')
-        predict_on_file(crepe, cretora, p_args.runtime_file)
+            cretora = SPD_Model('Carnatic')
+        predict_on_file(crepe, cretora, p_args.runtime_file, p_args.tonic)
