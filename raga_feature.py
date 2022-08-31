@@ -1,495 +1,374 @@
 import numpy as np
 import math
 from collections import defaultdict
+import h5py
 
-
-def freq_to_cents_1(freq, std=25, reduce=False):
+def freq_to_cents_np(freq, cents_mapping, std=25):
     frequency_reference = 10
-    c_true = 1200 * math.log(freq / frequency_reference, 2)
-
-    cents_mapping = np.linspace(0, 7180, 360) + 1997.3794084376191
+    c_true = 1200 * np.log2((np.array(freq)+1e-5) / frequency_reference)
+    c_true = np.expand_dims(c_true, 1)
+    cents_mapping = np.tile(np.expand_dims(cents_mapping,0), [c_true.shape[0],1])
     target = np.exp(-(cents_mapping - c_true) ** 2 / (2 * std ** 2))
+    pitch_cent = np.sum(target.reshape([c_true.shape[0], 6, 120]), 1)
+    return pitch_cent
 
-    if reduce:
-        return np.sum(target.reshape([6, 60]), 0)
-    return target
-
-
-def get_all_smooth_notes():
-    c_note = freq_to_cents_1(31.7 * 2, reduce=True)
-    all_notes = np.zeros([60, 60])
-    for p in range(60):
-        all_notes[p] = get_smooth_note(c_note, p)
-
-    return all_notes, c_note
-
-def get_smooth_note(c_note, note):
-    return np.roll(c_note, note, axis=-1)
-
-all_notes, c_note = get_all_smooth_notes()
-
-def freq_to_cents(freq, std=25, reduce=False):
+def freq_to_cents(freq, cents_mapping, std=25):
     frequency_reference = 10
-    c_true = 1200 * math.log(freq / frequency_reference, 2)
-
-    cents_mapping = np.linspace(0, 7180, 360) + 1997.3794084376191
+    c_true = 1200 * math.log((freq+1e-5) / frequency_reference,2)
     target = np.exp(-(cents_mapping - c_true) ** 2 / (2 * std ** 2))
+    pitch_cent = np.sum(target.reshape([6, 120]), 0)
+    return pitch_cent
 
-    if reduce:
-        return np.sum(target.reshape([6, 60]), 0)
-    return target
+def get_pitchvalues(pitches_arr):
+    cents_mapping = np.linspace(0, 7190, 720) + 2051.1487628680297
+    return freq_to_cents_np(pitches_arr, cents_mapping)
 
-def get_all_smooth_notes():
-    c_note = freq_to_cents(31.7 * 2, reduce=True)
-    all_notes = np.zeros([60, 60])
-    for p in range(60):
-        all_notes[p] = get_smooth_note(c_note, p)
-
-    return all_notes, c_note
-
-
-def get_raga_feature(pitches_unique, pitches_count, breaks_unique, func, c_note, all_notes, asc=True, transpose=False, relax=0):
-    r = [0,1]
-    lim = 55
-    #     ran = np.random.randint(pitches.shape[0]-1998)
-    #     ran = 63894
-    # pitches_arg = np.argmax(pitches[ran:ran + 1998 * 5, :], axis=1)
-
-    raga_feature = np.zeros([12, 12, 60])
-    pitches_dist_dict = defaultdict(lambda: [[-1,-1,-1,-1,np.zeros(60)]])
-    for a in range(*r):
-        pitches_arg_r = (pitches_unique + a + 60) % 60
-        m = c_note[a]
-        for i in range(0, 60, 5):
-            for j in range(0, lim + 1, 5):
-                i = (i + 60) % 60
-
-                if asc:
-                    j = (i + j + 60) % 60
-                else:
-                    j = (60 - j + i) % 60
-
-                #                 j=(j+60)%60
-                if i == j:
-                    continue
-                s = i
-                e = j
-                #             print(s,e)
-                durations = []
-                dist_asc = 0
-
-                #             pitches_r = np.roll(pitches, a, axis=1)
-                #             pitches_r = pitches_r[:1998,:]
-                temp = func(pitches_arg_r, pitches_count, pitches_dist_dict, s, e, asc, relax)
-                #             temp = normalize(temp)
-                #             temp = np.concatenate([temp,temp,temp], axis=-1)
-                #             temp1 = np.zeros(lim+10)
-                #             for k in range(lim+10):
-                #                 if compare_notes((i-5+60)%60,(i+35+5)%60,(i+k+60-5)%60, asc=True, relax=0):
-                #                     temp1[k]=temp[(i+k+60-5)%60]
-                # #             temp = temp[i:i+35]
-                raga_feature[i // 5, j // 5, :] += m * temp
-    #                 raga_feature[i//5,j//5,:]+=m*np.sum(temp)
-    #                 raga_feature[i//5,j//5,:]+=m*temp
-    #             temp, dur = get_dist_btw_notes(pitches_arg,e,s, False, all_notes)
-    #             dist_asc+=m*temp
-    #             durations.extend(m*dur)
-    #     raga_feature_red = compute_dot_prod(raga_feature)
-    # raga_feature_red = get_n_peaks_raga_feat(raga_feature)
-    # raga_feature_red = normalize(raga_feature)
-    raga_feature_red = raga_feature
-    if transpose:
-        raga_feature_red = np.transpose(raga_feature_red, [1,0,2])
-
-    # hist = normalize(np.mean(pitches,0))
-    # for i in range(raga_feature_red.shape[0]):
-    #     raga_feature_red[i,i,:] = hist
-
-    # raga_feature_red = stadardize(raga_feature_red)
-
-    raga_features_list = [[] for i in range(12)]
-    # for i in range(0,12):
-    #     raga_features_list.append(np.zeros([12,5*i]))
-
-    # raga_features_list = np.concatenate(raga_features_list, axis=1) # 12,390
-
-
-    for i in range(12):
-        # temp = np.zeros([12, (i+1)*5])
-        for j in range(12):
-            if i!=j:
-                # temp = get_span(raga_feature_red[i, j], i * 5, j * 5)
-                temp = raga_feature_red[i, j]
-                if i>j:
-                    d = j+12-i
-                else:
-                    d = j-i
-                raga_features_list[d].append(temp)
-
-    #     plt.imshow(np.expand_dims(np.mean(raga_feature_red,2),2), cmap='hot', interpolation='nearest')
-    # plt.imshow(np.expand_dims(raga_feature_red, 2), cmap='hot', interpolation='nearest')
-    return np.concatenate([raga_features_list[1:12][i] for i in range(11)],-1)
-
-def get_span(hist, s, e):
-    if e<s:
-        e=e+60
-    hist_conc = np.concatenate([hist, hist], axis=-1)
-    return hist_conc[s:e]
-
-def stadardize(z):
-    return (z - np.mean(z))/(np.std(z))
+def reorder_tonic(pitchvalue_prob, tonic_freq):
+    cents_mapping = np.linspace(0, 7190, 720) + 2051.1487628680297
+    tonic_pv_arr = freq_to_cents(tonic_freq, cents_mapping)
+    tonic_pv = np.argmax(tonic_pv_arr)
+    return np.roll(pitchvalue_prob, -tonic_pv, axis=1)
 
 def normalize(z):
     z_min = np.min(z)
-    return (z - z_min)/(np.max(z)-z_min+0.001)
+    return (z - z_min)/(np.max(z)-z_min+1e-6)
 
-
-def compare_notes(a, b, x, asc=True, relax=0):
-    a = (a + 60) % 60
-    b = (b + 60) % 60
+def compare(a,b,x,asc):
     if not asc:
         a, b = b, a
-    if a > b:
-        if x <= b:
-            x = x + 60
-        b = b + 60
-    if x >= a and x <= b:
+    if a <= modulo_add(a,x) <= modulo_add(a,b):
         return True
-
     return False
 
+def modulo(x):
+    return x%120
 
-def get_dist_btw_notes(pitches_arg, pitches_count, allowed_indices, note_a, note_b, asc, relax):
+def modulo_add(x,y):
+    mx = modulo(x)
+    my = modulo(y)
+    if mx>my:
+        return my+120
+    return my
 
-    if asc:
-        relax_sign = relax
-    else:
-        relax_sign = -relax
+def relax_fun(p,add,r=4):
+    if add:
+        return modulo(p+4)
+    return modulo(p-4)
 
-    note_a = (60 + note_a) % 60
-    note_b = (60 + note_b) % 60
 
-    pitch_dist_cache = []
+def get_dist_btw_idx(pitchvalue_prob, start_idx, end_idx):
+    dist = 0
+    for i in range(start_idx, end_idx + 1):
+        dist += pitchvalue_prob[i]
+    return dist
 
-    consumed_indices = set()
-    pitches_arg_len = len(pitches_arg)
-    for ai in allowed_indices:
-        if ai in consumed_indices:
+
+def get_dist_btw_shortlisted_idxs(pitchvalue_prob, shortlisted_idxs, off_start=0, off_end=None):
+    if off_end is None:
+        off_end = len(pitchvalue_prob) - 1
+    dist = 0
+    for sidx in shortlisted_idxs:
+        i1, i2, i3, i4 = sidx[0], sidx[1], sidx[2], sidx[3]
+        if i2 < off_start:
             continue
-        prev_dist = np.zeros(60)
-        start = False
-        end = False
-        c = 0
-        k = 0
-        for idx in range(ai,pitches_arg_len):
-            p = pitches_arg[idx]
+        if i3 > off_end:
+            continue
+        if i1 <= off_start <= i2:
+            i1 = off_start
+        if i3 <= off_end <= i4:
+            i4 = off_end
 
-            if compare_notes(note_a-relax_sign, note_a+relax_sign, p, asc,0):
-                start = True
-                consumed_indices.add(idx)
+        dist += get_dist_btw_idx(pitchvalue_prob, i1, i4)
+    return normalize(dist)
 
-            if start and compare_notes(note_b-relax_sign, note_b+relax_sign, p, asc,0):
-                end = True
 
-            if start and (compare_notes(note_a-relax_sign, note_b+relax_sign, p, asc,0) or compare_notes(0-relax_sign, 0+relax_sign, p, asc,0)):
-                prev_dist[p] = prev_dist[p] + pitches_count[idx]
-                k=1
+def update_shortlisted_index(shortlisted_index, pitch_st_mapping, start_index, end_index):
+    psm_ss = pitch_st_mapping[start_index][0]
+    psm_se = pitch_st_mapping[start_index][1]
+    psm_es = pitch_st_mapping[end_index][0]
+    psm_ee = pitch_st_mapping[end_index][1]
 
-            if start and end and not (compare_notes(note_a-relax_sign, note_b+relax_sign, p, asc,0) or compare_notes(0-relax_sign, 0+relax_sign, p, asc,0)):
-                if len(pitch_dist_cache)==0:
-                    cum_pitch_dist = prev_dist
-                else:
-                    cum_pitch_dist = pitch_dist_cache[-1][1:] + prev_dist
-                pitch_dist_cache.append(np.concatenate([[ai],cum_pitch_dist], axis=-1))
-                c += 1
-                k=0
-                break
+    shortlisted_index.append((psm_ss, psm_se, psm_es, psm_ee))
 
-            if not (compare_notes(note_a-relax_sign, note_b+relax_sign, p, asc,0) or compare_notes(-relax_sign, relax_sign, p, asc,0)):
-                k=0
-                break
 
-        if k==1:
-            if len(pitch_dist_cache) == 0:
-                cum_pitch_dist = prev_dist
-            else:
-                cum_pitch_dist = pitch_dist_cache[-1][1:] + prev_dist
-            pitch_dist_cache.append(np.concatenate([[ai], cum_pitch_dist], axis=-1))
-
-        # if c == 0 and k==0:
-        #     pitch_dist += np.zeros(60)
-
-    return pitch_dist_cache
-
-def get_dist_btw_notes_1(pitches, pitches_count, pitch_hist_dic, note_a, note_b, asc=True, relax=0):
-    # if asc:
-    #     note_a = note_a-relax
-    #     note_b = note_b+relax
-    # else:
-    #     note_a = note_a+relax
-    #     note_b = note_b-relax
-
-    note_a = (60 + note_a) % 60
-    note_b = (60 + note_b) % 60
-    #     ct_frames = (16000*cutoff - 1024)/480 + 1
-    #     c_note = freq_to_cents(31.7*2, reduce=True)
-    pitch_dist = 0
-    prev_note = note_a
-    prev_dist = np.zeros(60)
-    #     pitches_arg = np.argmax(pitches, 1)
-    pitches_arg = pitches
-    start = False
+def compute_spd_ps_pe(start_idx, pitches_arg, pitch_st_mapping, ps, pe, asc, relax=4):
+    #     width = None
+    #     prev_dist = 0
+    n = len(pitches_arg)
+    k = 0
+    start = True
     end = False
-    c = 0
-    k=0
+    b = 0
+    start_id = 0
+    end_id = 0
+    si = 0
+    prev_s = None
+    start_index = -1
+    end_index = -1
+    idx = start_idx[si]
+    dist_pres = False
+    dist_added = False
+    #     for idx in range(start_idx[si], n):
+    #     base_key = '{}_{}_{}_{}'
+    shortlisted_index = []
+    while idx < n:
 
-    if asc:
-        relax_sign = relax
-    else:
-        relax_sign = -relax
-    #     durations = []
-    start_p = -1
-    end_p = -1
-    for idx in range(len(pitches_arg)):
+        #         if si>=len(start_idx):
+        #             break
+        #         if si>=len(start_idx):
+        #             break
+        #         if idx>=start_idx[si]:
+        #             si+=1
         p = pitches_arg[idx]
 
-        if compare_notes(note_a-relax_sign, note_a+relax_sign, p, asc,0):
-            if not start:
-                start_p = idx
-            start = True
-
-        if start and compare_notes(note_b-relax_sign, note_b+relax_sign, p, asc,0):
-            end = True
-
-
-        if start and compare_notes(note_a-relax_sign, note_b+relax_sign, p, asc,0):
-            prev_dist[p] = prev_dist[p] + pitches_count[idx]
-            end_p = idx
-            k=1
-
-        if start and end and not compare_notes(note_a-relax_sign, note_b+relax_sign, p, asc,0):
-            pitch_dist += prev_dist
-            prev_dist = np.zeros(60)
+        if start and end and p != pe:
+            update_shortlisted_index(shortlisted_index, pitch_st_mapping, start_index, end_index)
+            # This verfies Equation 13; Page 4
+            #             add_lm_file(lm_file, pitch_st_mapping, start_index, end_index, prev_dist, base_key)
+            #             lm_file[base_key.format()]
+            #             shortlisted_index.append()
+            #             prev_dist = 0
             start = False
             end = False
-            start_p = -1
-            end_p = -1
-            c += 1
-            k=0
+            start_index = -1
+            end_index = -1
+            dist_pres = True
 
-        if not compare_notes(note_a-relax_sign, note_b+relax_sign, p, asc,0):
-            prev_dist = np.zeros(60)
+        if start and p == pe:
+            end = True  # This verifies Equation 14; Page 4
+            end_index = idx
+        #             prev_dist += get_dist_btw_idx(pitchvalue_prob, pitch_sst_mapping, idx)
+
+        #         if start and (compare(ps, pe, p, asc)) and (not end): # This verifies Equation 15; Page 4
+        #             prev_dist += get_dist_btw_idx(pitchvalue_prob, pitch_st_mapping, idx)
+        #           prev_dist_start.append(idx)
+
+        if p == ps:
+            start = True  # This verifies Equation 12; Page 4
+            start_index = idx
+        #             prev_dist += get_dist_btw_idx(pitchvalue_prob, pitch_st_mapping, idx)
+
+        if not (compare(ps, pe, p, asc)):
+            #             prev_dist = 0
             start = False
             end = False
-            start_p = -1
-            end_p = -1
-            k=0
+            start_index = -1
+            end_index = -1
 
-        # if note_a==10:
-        #     if start and end:
-
-
-    if k==1:
-        pitch_dist += prev_dist
-        # pitch_hist_dic[start_p].append([note_a, note_b, end_p, pitches_arg[end_p], prev_dist])
-
-    if c == 0 and k==0:
-        return np.zeros(60)
-    return pitch_dist
-
-def compare_pitch_dist(note_a, note_b, p, pitch_hist_dic):
-    if p not in pitch_hist_dic:
-        return None
-    pitch_dist_cache = pitch_hist_dic[p]
-    d = 0
-    spdc = None
-
-    for pdc in pitch_dist_cache:
-        prev_note_a = pdc[0]
-        prev_note_b = pdc[1]
-        print(note_a, note_b, prev_note_a, prev_note_b)
-        if compare_notes(note_a, note_b, prev_note_a, asc=True) and compare_notes(note_a, note_b, prev_note_b, asc=True):
-            spdc = pdc
-            break
-            # d1 = (note_a - prev_note_a+60)%60
-            # d2 = (note_b - prev_note_b + 60) % 60
-            # td = d1+d2
-            # if td<=d:
-            #     d = td
-            #     spdc = pdc
-
-    return spdc
-
-
-def get_prev_note_b_dist_dict(key, note_a, prev_note_b_dist_dict):
-    while key[1]!=note_a:
-        if key in prev_note_b_dist_dict:
-            return prev_note_b_dist_dict[key]
-        key = (key[0], (key[1]-5+60)%60)
-
-    return np.zeros(60)
-
-def get_fast_raga_feature(pitches_arg, pitches_count, asc, relax=0):
-
-    lim = 55
-
-    pitch_dist_list = {}
-
-
-    note_a_dict = get_note_a_dict(relax, asc=asc)
-    allowed_indices_dict = get_allowed_indices(pitches_arg, note_a_dict)
-
-
-    for i in range(0, 60, 5):
-        allowed_indices = allowed_indices_dict[i]
-        for j in range(0, lim + 1, 5):
-            i = (i + 60) % 60
-            s = i
-
-            if asc:
-                e = (i + j + 60) % 60
+        if p == ps:
+            si += 1
+        if not start:
+            if si >= len(start_idx):
+                break
             else:
-                e = (60 - j + i) % 60
+                idx = start_idx[si]
+                idx -= 1
+        idx += 1
 
-            if s==e:
+    # This handles an edge case where prev_dist is not empty but not yet been added to cum_pitch_dist
+    if start and end:
+        update_shortlisted_index(shortlisted_index, pitch_st_mapping, start_index, end_index)
+    #         add_lm_file(lm_file, pitch_st_mapping, start_index, end_index, prev_dist, base_key)
+
+    if not dist_pres:
+        #         prev_dist = get_pd_between_pspe(pitchvalue_prob, ps, pe, asc)  # Return simple pitch distributin incase SPD is empty lines 254, 255
+        #         add_lm_file(lm_file, pitch_st_mapping, start_index, end_index, prev_dist, base_key)
+        update_shortlisted_index(shortlisted_index, pitch_st_mapping, 0, n - 1)
+    return shortlisted_index
+
+
+def get_all_smooth_pitch_values(std=25):
+    c_note = freq_to_cents(32.7 * 2, std)
+    all_notes = np.zeros([120, 120])
+    for p in range(120):
+        all_notes[p] = get_smooth_pitch_value(c_note, p)
+
+    return all_notes, c_note
+
+
+def get_smooth_pitch_value(c_note, note):
+    return np.roll(c_note, note, axis=-1)
+
+
+def gauss_smooth(raga_feat):
+    all_notes, c_note = get_all_smooth_pitch_values(std=25)
+    smooth = np.zeros([12, 12, 120, 2])
+    for i in range(12):
+        for j in range(12):
+            if i == j:
                 continue
-
-            pitch_dist_cache_1 = get_dist_btw_notes(pitches_arg, pitches_count, allowed_indices, s, e, asc,
-                                                    relax)
-            pitch_dist_cache_2 = get_strict_dist_btw_notes(pitches_arg, pitches_count, allowed_indices, s, e, asc,
-                                                           relax)
-
-            pitch_dist_list[(s,e)] = [pitch_dist_cache_1, pitch_dist_cache_2]
-            # pitch_dist_list[(s, e)] = temp
-            # break
-
-    return pitch_dist_list
-
-    # print(pitch_note_b_dist_dict.keys())
-
-def get_allowed_indices(pitches_arg, note_a_dict):
-
-    allowed_indices = defaultdict(list)
-    for idx in range(len(pitches_arg)):
-        p = pitches_arg[idx]
-        note_a = note_a_dict[p]
-        if note_a!=-1:
-            allowed_indices[note_a].append(idx)
-    return allowed_indices
+            for k in range(0, 2):
+                smooth[i, j, :, k] = gauss_smooth_util(raga_feat[i, j, :, k], all_notes)
+    return smooth
 
 
-def get_note_a_dict(relax, asc):
-    if asc:
-        relax_sign = relax
-    else:
-        relax_sign = -relax
+def gauss_smooth_util(arr1, all_notes):
+    smooth = 0
+    for i in range(120):
+        smooth = smooth + all_notes[i] * arr1[i]
 
-    note_b_dict = defaultdict(lambda: -1)
-    for note in range(0,60,5):
-        for p in range(60):
-            if compare_notes(note - relax_sign, note + relax_sign, p, asc, 0):
-                note_b_dict[p] = note
-    return note_b_dict
-
-def get_note_b_dict_1(note_a, note_b_list, relax_sign, asc):
-    note_b_dict = defaultdict(lambda: -1)
-    note_b_list = np.sort(np.array(note_b_list))
+    #     smooth = np.power(normalize(smooth), 0.8)
+    smooth = normalize(smooth)
+    return smooth
 
 
-    for p in range(60):
-        for note in note_b_list:
-            if compare_notes(note_a - relax_sign, note + relax_sign, p, asc, 0):
-                note_b_dict[p] = note
-                break
-    return note_b_dict
-
-def get_seq_dict(pitches_arg,relax_sign, asc):
-    note_b_dict = get_note_b_dict_2(relax_sign, asc)
-
-
-    seq_dict = defaultdict(lambda:-1)
-    for p in pitches_arg:
-        note_b = note_b_dict[p]
-        if note_b!=-1:
-            seq_dict[p] = note_b
-
-def get_strict_dist_btw_notes(pitches_arg, pitches_count, allowed_indices, note_a, note_b, asc, relax):
-
-    if asc:
-        relax_sign = relax
-    else:
-        relax_sign = -relax
-
-    note_a = (60 + note_a) % 60
-    note_b = (60 + note_b) % 60
-
-    pitch_dist_cache = []
-
-    consumed_indices = set()
-    pitches_arg_len = len(pitches_arg)
-    for ai in allowed_indices:
-        if ai in consumed_indices:
-            continue
-        prev_dist = np.zeros(60)
-        start = False
-        end = False
-        c = 0
-        k = 0
-        prev_max = note_a
-        for idx in range(ai,pitches_arg_len):
-            p = pitches_arg[idx]
-
-            if compare_notes(note_a-relax_sign, note_a+relax_sign, p, asc,0):
-                start = True
-                consumed_indices.add(idx)
-                prev_max = note_a
-
-            if start and compare_notes(note_b-relax_sign, note_b+relax_sign, p, asc,0):
-                end = True
-
-            if start and (compare_notes(prev_max-relax_sign, note_b+relax_sign, p, asc,0) or compare_notes(0-relax_sign, 0+relax_sign, p, asc,0)):
-                prev_dist[p] = prev_dist[p] + pitches_count[idx]
-                k=1
-
-            if start and end and not (compare_notes(prev_max-relax_sign, note_b+relax_sign, p, asc,0) or compare_notes(0-relax_sign, 0+relax_sign, p, asc,0)):
-                if len(pitch_dist_cache)==0:
-                    cum_pitch_dist = prev_dist
-                else:
-                    cum_pitch_dist = pitch_dist_cache[-1][1:] + prev_dist
-                pitch_dist_cache.append(np.concatenate([[ai],cum_pitch_dist], axis=-1))
-                c += 1
-                k=0
-                break
-
-            if not (compare_notes(prev_max-relax_sign, note_b+relax_sign, p, asc,0) or compare_notes(-relax_sign, relax_sign, p, asc,0)):
-                k=0
-                break
-
-            if compare_notes(prev_max, note_b + relax_sign, p, asc):
-                prev_max = p
-
-        if k==1:
-            if len(pitch_dist_cache) == 0:
-                cum_pitch_dist = prev_dist
+def get_std_idx(pitches_arg, relax=4):
+    pitch_dict = defaultdict(list)
+    std_pitches = []
+    pitch_st_mapping = []
+    prev_p = None
+    k = 0
+    for i, p in enumerate(pitches_arg):
+        if prev_p is None:
+            std_pitches.append(p // 10)
+            pitch_dict[p // 10].append(k)
+        elif prev_p // 10 != p // 10:
+            k += 1
+            std_pitches.append(p // 10)
+            pitch_dict[p // 10].append(k)
+        if k >= len(pitch_st_mapping):
+            pitch_st_mapping.append([i, i])
+        else:
+            if pitch_st_mapping[-1][1] + 1 == i:
+                pitch_st_mapping[-1][1] = i
             else:
-                cum_pitch_dist = pitch_dist_cache[-1][1:] + prev_dist
-            pitch_dist_cache.append(np.concatenate([[ai], cum_pitch_dist], axis=-1))
+                pitch_st_mapping.append([i, i])
+        prev_p = p
 
-        # if c == 0 and k==0:
-        #     pitch_dist += np.zeros(60)
+    return pitch_dict, std_pitches, pitch_st_mapping
 
-    return pitch_dist_cache
+def full_spd(pitches_arg, lm_file):
+    pitch_dict, std_pitches, pitch_st_mapping = get_std_idx(pitches_arg)
+    for asc in [True, False]:
+        for s in range(0, 12, 1):
+            start_idx = pitch_dict[s]
+            for e in range(0, 12, 1):
+                if s==e:
+                    continue
+#                 lm_file_group = lm_file.create_group("{}_{}_{}_{}".format(mbid, s, e, asc))
+                shortlisted_index = compute_spd_ps_pe(start_idx, std_pitches, pitch_st_mapping, s, e, asc)
+                lm_file["{}_{}_{}".format(s, e, asc)] = shortlisted_index
 
-def get_note_b(note_a, p, range_dict):
+def generate_spd_idx_all_files(pitchvalue_prob):
+    spd_idx_lm_file = {}
+    pitches_arg = np.argmax(pitchvalue_prob, axis=1)
+    #                 pitch_dict = get_full_spd_st(pitches_arg, mbid, spd_idx_lm_file)
+    full_spd(pitches_arg, spd_idx_lm_file)
+    return spd_idx_lm_file
 
-    note_b_range = range_dict[(note_a,p)]
-    if len(note_b_range)==0:
-        return None
-    note_b = note_b_range[0]
-    # if note_b==5:
-    return note_b
-    # note_b = (note_a+5+60)%60
+def get_cliped_dist(s,e,asc,dist,clip=15):
+    s10 = s*10
+    e10 = e*10
+    if asc:
+        relax = clip
+    else:
+        relax = -clip
+    i = modulo(s10-relax)
+    j = modulo(e10+relax)
+    m = 0
+    while i!=j:
+        if asc:
+            i = modulo(i+1)
+        else:
+            i = modulo(i-1)
+        m+=1
+    dist_sliced = np.zeros(m)
+    i = modulo(s10-relax)
+    j = modulo(e10+relax)
+    if (m<=abs(relax)):
+        dist_sliced = dist
+    else:
+        m=0
+        while i!=j:
+            if asc:
+                i = modulo(i+1)
+            else:
+                i = modulo(i-1)
+            dist_sliced[m] = dist[i]
+            m+=1
+    return dist_sliced
 
+def get_spd_from_idx(pitchvalue_prob, off_start=0, off_end=None):
+    dist_hist = get_dist_btw_idx(pitchvalue_prob, 0, len(pitchvalue_prob)-1)
+    dist_hist = normalize(dist_hist)
+    spd_idx_lm_file = generate_spd_idx_all_files(pitchvalue_prob)
+    full_spd_dist = np.zeros([12,12,120,2])
+    for asc in [True, False]:
+        asc_int = 1-int(asc)
+        for s in range(0,12,1):
+            for e in range(0, 12, 1):
+                if s==e:
+                    full_spd_dist[s,e,:,asc_int] = dist_hist
+                    continue
+                shortlisted_idxs = spd_idx_lm_file['{}_{}_{}'.format(s, e, asc)]
+                dist = get_dist_btw_shortlisted_idxs(pitchvalue_prob,shortlisted_idxs, off_start, off_end)
+
+                if np.sum(dist)==0:
+                    full_spd_dist[s, e, :, asc_int] = dist_hist
+                else:
+                    full_spd_dist[s,e,:,asc_int] = dist
+    return full_spd_dist, dist_hist
+
+def generate_full_spd_cache(pitchvalue_prob):
+    full_spd_dist, dist_hist = get_spd_from_idx(pitchvalue_prob)
+    return full_spd_dist, dist_hist
+
+def get_raga_feat_and_predict(knn_models, pitchvalue_prob, n_labels):
+    full_spd_dist, dist_hist = generate_full_spd_cache(pitchvalue_prob)
+    pred_proba = np.zeros([25, n_labels])
+    for wd in range(0,250,10):
+        spd_knn = knn_models[wd]
+        n_rows = 1
+        if wd == 0:
+            feat = np.zeros([n_rows, 120])
+            feat[0] = dist_hist
+        elif 0<wd<120:
+            feat = []
+            feat_curr = []
+            for s in range(0,120,10):
+                e = modulo(s+wd)
+                if s==e:
+                    continue
+                s10 = s//10
+                e10 = e//10
+                hist_1 = full_spd_dist[s10,e10,:,0]
+                hist_2 = full_spd_dist[e10,s10,:,1]
+                hist_1 = get_cliped_dist(s,e,True,hist_1,clip=15)
+                hist_2 = get_cliped_dist(e,s,False,hist_2,clip=15)
+                feat_curr.append(hist_1)
+                feat_curr.append(hist_2)
+#                 if feat_curr is None:
+#                     feat_curr = np.concatenate([hist_1, hist_2], axis=-1)
+#                 else:
+#                     feat_curr = np.concatenate([feat_curr, hist_1], axis=-1)
+#                     feat_curr = np.concatenate([feat_curr, hist_2], axis=-1)
+            feat_curr = np.concatenate(feat_curr, axis=-1)
+#             feat[row[0]] = feat_curr
+            feat.append(feat_curr)
+        elif 120<=wd<240:
+            feat = []
+            s = wd-120
+            feat_curr = []
+            for e in range(0,120,10):
+                if s==e:
+                    continue
+                s10 = s//10
+                e10 = e//10
+                hist_1 = full_spd_dist[s10,e10,:,0]
+                hist_2 = full_spd_dist[e10,s10,:,1]
+                hist_1 = get_cliped_dist(s,e,True,hist_1,clip=15)
+                hist_2 = get_cliped_dist(e,s,False,hist_2,clip=15)
+                feat_curr.append(hist_1)
+                feat_curr.append(hist_2)
+            feat_curr = np.concatenate(feat_curr, axis=-1)
+            feat.append(feat_curr)
+        else:
+            feat = []
+            hist_1 = np.array(full_spd_dist)
+            feat.append(np.reshape(hist_1, [-1]))
+        feat = np.array(feat)
+        pred_proba[wd//10] = spd_knn.predict(feat)
+    return pred_proba
 
 def get_range_dict(relax_sign, asc):
     lim = 55
@@ -512,109 +391,6 @@ def get_range_dict(relax_sign, asc):
                     # range_dict.append(((p,i,j)))
                     # range_dict[(p,i)] = j
     return range_dict, inv_range_dict
-
-
-def get_all_raga_features(pitches_arg):
-    relax=2
-
-    c_note, all_notes = get_all_smooth_notes()
-    # print(len(pitches_unique), len(pitches_count))
-    pitches_dist_dict = {}
-    #
-    # f2 = get_dist_btw_notes(pitches_unique, pitches_count, pitches_dist_dict, 0, 5, asc=True, relax=relax)
-    # print(pitches_dist_dict.keys())
-
-    # f2 = get_fast_raga_feature(pitches_unique, pitches_count, relax=relax)
-    # f3 = get_fast_raga_feature(pitches_unique, pitches_count, relax=relax)
-    # f4 = get_fast_raga_feature(pitches_unique, pitches_count, relax=relax)
-
-    # f2 = get_raga_feature(pitches_unique, pitches_count, breaks_unique, get_dist_btw_notes, c_note, all_notes, asc=True, relax=relax)
-    # f2 = get_raga_feature(pitches_unique, pitches_count, breaks_unique, get_dist_btw_notes, c_note, all_notes, asc=False, transpose=True, relax=relax)
-    # f3 = get_raga_feature(pitches_unique, pitches_count, breaks_unique, get_strict_dist_btw_notes, c_note, all_notes, asc=True, relax=relax)
-    # f4 = get_raga_feature(pitches_unique, pitches_count, breaks_unique, get_strict_dist_btw_notes, c_note, all_notes, asc=False, transpose=True, relax=relax)
-
-    # feat =  np.stack([f1, f2], axis=-1)
-    # feat = np.reshape(feat, [12,11,60,2])
-
-    # feat = np.stack([f1, f2, f3, f4], axis=-1)
-    # feat = np.reshape(feat, [12,11,60,4])
-
-
-    return pitch_dist_list_1, pitch_dist_list_2
-    # return feat
-
-def get_unique_seq(pitches_arg):
-    ps = pitches_arg[0]
-    count = 1
-    pitches_unique = []
-    pitches_count = []
-    for p in pitches_arg[1:]:
-        if p == ps:
-            count += 1
-        else:
-            pitches_unique.append(ps)
-            pitches_count.append(count)
-            count = 1
-        ps = p
-
-    pitches_unique.append(ps)
-    pitches_count.append(count)
-
-    return np.array(pitches_unique), np.array(pitches_count)
-
-def get_raga_feat(pitches):
-    raga_feat = np.zeros([12,12,60,4])
-    lim = 55
-    relax = 2
-    pitches_arg = np.argmax(pitches,1)
-    pitches_unique, pitches_count = get_unique_seq(pitches_arg)
-    pitch_dist_list_1 = get_fast_raga_feature(pitches_unique, pitches_count, asc=True, relax=relax)
-    pitch_dist_list_2 = get_fast_raga_feature(pitches_unique, pitches_count, asc=False, relax=relax)
-
-    for i in range(0, 60, 5):
-        for j in range(5, lim + 1, 5):
-            s = i
-            e = (i + j + 60) % 60
-
-            raga_feat[s // 5, e // 5, :, 0] = get_arr(pitch_dist_list_1[(s, e)][0])
-            raga_feat[s // 5, e // 5, :, 1] = get_arr(pitch_dist_list_2[(e, s)][0])
-            raga_feat[s // 5, e // 5, :, 2] = get_arr(pitch_dist_list_1[(s, e)][1])
-            raga_feat[s // 5, e // 5, :, 3] = get_arr(pitch_dist_list_2[(e, s)][1])
-
-    return raga_feat
-
-def gauss_smooth_util(arr):
-    smooth = 0
-    for i in range(60):
-        smooth = smooth + all_notes[i] * arr[i]
-    smooth = stadardize(smooth)
-    return smooth
-
-def get_arr(arr):
-    if len(arr)==0:
-        return np.zeros(60)
-
-    return gauss_smooth_util(arr[-1][1:])
-
-def generate_shist_file(pitches):
-
-    pitch_dist_list_1, pitch_dist_list_2 = get_all_raga_features(pitches_arg)
-
-    lim = 55
-    raga_feat_dict = {}
-    for i in range(0, 60, 5):
-        for j in range(0, lim + 1, 5):
-            s = i
-            e = (i + j + 60) % 60
-
-            if s == e:
-                continue
-
-            f.create_dataset('{}_{}_{}_{}'.format(mbid, s, e, 0), data=pitch_dist_list_1[(s, e)][0])
-            f.create_dataset('{}_{}_{}_{}'.format(mbid, s, e, 1), data=pitch_dist_list_2[(e, s)][0])
-            f.create_dataset('{}_{}_{}_{}'.format(mbid, s, e, 2), data=pitch_dist_list_1[(s, e)][1])
-            f.create_dataset('{}_{}_{}_{}'.format(mbid, s, e, 3), data=pitch_dist_list_2[(e, s)][1])
-
 
 if __name__ == '__main__':
     # pitches_arg = np.arange(0,60)
