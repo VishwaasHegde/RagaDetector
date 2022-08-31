@@ -11,7 +11,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Input, Reshape, Conv2D, BatchNormalization, Conv1D
 from tensorflow.keras.layers import MaxPool2D, Dropout, Permute, Flatten, Dense, MaxPool1D
 from tensorflow.keras.models import Model
-
+import raga_feature
 import pyhocon
 import os
 import pandas as pd
@@ -19,6 +19,7 @@ from pydub import AudioSegment
 from resampy import resample
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import pickle
+import matplotlib.pyplot as plt
 
 models = {
     'tiny': None,
@@ -54,7 +55,14 @@ class CRePE:
         self.pitch_model = pitch_model
         self.pitch_config = pitch_config
 
+    def interp1d(self, array: np.ndarray, fn, tn) -> np.ndarray:
+        return np.interp(np.linspace(0, fn - 1, num=tn), np.arange(fn), array)
 
+    def stretch(self, pitches):
+        pitches_exp = np.zeros([pitches.shape[0], 120])
+        for idx, p in enumerate(pitches):
+            pitches_exp[idx] = self.interp1d(p, 60, 120)
+        return pitches_exp
 
     def build_model(self, config):
         model_capacity = config['model_capacity']
@@ -84,8 +92,10 @@ class CRePE:
         # frequencies = 10 * 2 ** (cents / 1200)
         # pitches = [data_utils.freq_to_cents(freq) for freq in frequencies]
         # pitches = np.sum(np.reshape(pitches, [-1,6,60]),1)
-        pitches = np.expand_dims(pitches, 0)
-
+        # plt.plot(np.mean(pitches, axis=0))
+        # plt.show()
+        print('Argmax')
+        print(np.argmax(np.mean(pitches, axis=0)))
         return pitches
 
     def get_pitch_emb(self, x, n_seq, n_frames, model_capacity):
@@ -151,7 +161,7 @@ class CRePE:
         return y, den.weights[0]
 
 
-class CreToRa:
+class SPD_Model:
 
     def __init__(self, tradition):
         self.graph_tonic = tf.Graph()
@@ -161,11 +171,20 @@ class CreToRa:
                 tonic_config = pyhocon.ConfigFactory.parse_file("experiments.conf")['tonic']
                 self.tonic_model = self.build_and_load_model(tonic_config, 'tonic', tradition)
                 self.tonic_model.load_weights('model/{}_tonic_model.hdf5'.format(tradition))
-
-        if tradition=='hindustani':
-            self.indices = {0: 4, 5: 2, 11: 1, 14: 3, 7: 1, 19:1}
+        if tradition == 'Carnatic':
+            self.models_weights = [0.21073548, 0.09824791, -0.11856023, 0.10903256,
+                                   0.071041666, 0.029498437, 0.058856107, 0.005804086,
+                                   0.23304237, -0.0036090536, -0.16575447, 0.1428653,
+                                   -0.114484884, 0.067209795, -0.15399341, 0.06962044,
+                                   0.04790523, -0.1683678, 0.067225285, -0.06486485,
+                                   0.12629355, -0.06692766, 0.035410862, 0.14386775, 0.13790666]
         else:
-            self.indices = {0: 4, 5: 2, 11: 1, 14: 3, 19: 1}
+            self.models_weights = [0.14530538, 0.16622296, 0.023467897, -0.14283751,
+                                   0.28589576, -0.18367307, 0.06799893, 0.12999865,
+                                   -0.50317067, 0.39374444, -0.011883757, -0.027416285,
+                                   -0.10365037, 0.026902597, -0.0032952016, 0.1016536,
+                                   0.09131258, 0.29101947, 0.050576165, -0.16490516,
+                                   -0.09560222, -0.116639435, 0.13686526, 0.14130622, 0.2870755]
 
         raga_config = pyhocon.ConfigFactory.parse_file("experiments.conf")['raga']
         self.raga_list = self.get_raga_list(raga_config, tradition)
@@ -208,9 +227,9 @@ class CreToRa:
 
         elif task == 'raga':
             knn_models = {}
-            for k,v in self.indices.items():
-                with open('model/{}/knn_{}_{}.pkl'.format(tradition,tradition,k), 'rb') as f:
-                    knn_models[k] = pickle.load(f)
+            for wd in range(0,250,10):
+                with open('data/RagaDataset/{}/model/spd_knn_{}.pkl'.format(tradition, wd), 'rb') as f:
+                    knn_models[wd] = pickle.load(f)
             return knn_models
 
     def get_hist_emb(self, hist_cqt, note_dim, indices, topk, drop_rate=0.2):
@@ -252,60 +271,6 @@ class CreToRa:
         tonic_logits = tf.roll(tonic_logits,0,axis=1, name='tonic')
         return tonic_logits
 
-    def get_raga_emb(self, raga_feat, note_dim):
-        f = 128
-
-        cnn_raga_emb = []
-        raga_feat_dict_2 = defaultdict(list)
-
-        lim = 55
-        for i in range(0, 60, 5):
-            for j in range(5, lim + 1, 5):
-                s = i
-                e = (i + j + 60) % 60
-
-                rf = raga_feat[s//5,e//5,:,:]
-                raga_feat_dict_2[j].append(rf)
-
-        for k,v in raga_feat_dict_2.items():
-            feat_1 = tf.stack(v, axis=0)
-            feat_1 = tf.stack(feat_1)
-            feat_2 = self.get_raga_from_cnn(feat_1, f, note_dim)
-            cnn_raga_emb.append(feat_2)
-
-        cnn_raga_emb = tf.stack(cnn_raga_emb)
-        cnn_raga_emb = tf.squeeze(cnn_raga_emb,1)
-        cnn_raga_emb = tf.transpose(cnn_raga_emb)
-        cnn_raga_emb = Dropout(0.5)(cnn_raga_emb)
-        cnn_raga_emb = Dense(1)(cnn_raga_emb)
-        return tf.transpose(cnn_raga_emb)
-
-    def get_raga_from_cnn(self, raga_feat, f, note_dim=384):
-
-        raga_feat = tf.expand_dims(raga_feat,0)
-
-        y = Conv2D(f, (3, 5), activation='relu', kernel_initializer='he_uniform', padding='same')(raga_feat)
-        y = Conv2D(f, (3, 5), activation='relu', kernel_initializer='he_uniform', padding='same')(y)
-        y = BatchNormalization()(y)
-        y = MaxPool2D(pool_size=(2, 2))(y)
-        # y = AvgPool2D(pool_size=(2, 2))(y)
-        y = Dropout(0.7)(y)
-
-        y = Conv2D(f*2, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same')(y)
-        y = Conv2D(f*2, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same')(y)
-        y = BatchNormalization()(y)
-        y = MaxPool2D(pool_size=(2, 2))(y)
-        # y = AvgPool2D(pool_size=(2, 2))(y)
-        y = Dropout(0.7)(y)
-
-        y = Flatten()(y)
-
-        # y = Dense(2*note_dim, kernel_initializer='he_uniform', activation='relu')(y)
-        # y = Dropout(0.2)(y)
-        y = Dense(note_dim, kernel_initializer='he_uniform', activation='relu')(y)
-        return Dropout(0.2)(y)
-
-
     def convolution_block(self, d, input_data, ks, f, drop_rate):
         if d==1:
             z = Conv1D(filters=f, kernel_size=ks, strides=1, padding='same', activation='relu')(input_data)
@@ -329,45 +294,41 @@ class CreToRa:
         min_z = tf.reduce_min(z)
         return (z - min_z) / (tf.reduce_max(z) - min_z)
 
-    def predict_tonic_raga(self, audio, pitches, tonic=None):
+    def  predict_tonic_raga(self, crepe, audio, pitchvalue_prob, tonic=None):
         if tonic is None:
-
-            hist_cqt = data_utils.get_hist_cqt(audio, pitches)
+            hist_cqt = data_utils.get_hist_cqt(audio, pitchvalue_prob)
             with self.sess_tonic.as_default():
                 with self.graph_tonic.as_default():
                     pred_tonic = self.tonic_model.predict(hist_cqt)[0]
                     print("Tonic Prediction Complete")
+
+            print('pred_tonic', pred_tonic)
+            print('argmax pred_tonic', np.argmax(pred_tonic))
+
             pred_12 = np.sum(np.reshape(pred_tonic, [12, 5]), 1)
             tonic_12 = standard_tonic[np.argmax(pred_12)]
             tonic = np.argmax(pred_tonic)
+            # tonic = tonic-3
 
             # tonic = 20
         else:
             tonic_12 = standard_tonic.index(tonic)
             tonic = tonic_12*5
+            tonic = tonic+3  # Ugly hack to fix some tonic issue
 
-        pitches = np.roll(pitches, -tonic, axis=2)
+        # tonic = 20
+        pitchvalue_prob = crepe.stretch(pitchvalue_prob)
+        tonic = tonic*2
+        print('tonic', tonic)
+        pitchvalue_prob = np.roll(pitchvalue_prob, -tonic, axis=1)
 
-        pred_raga = 0
-        for k,v in self.indices.items():
-            knn_model = self.knn_models[k]
-            feat = np.zeros([12,60,2])
-            if k==0:
-                feat = data_utils.get_histogram(pitches[0])
-            elif k < 12:
-                raga_feat = data_utils.get_raga_feat(pitches[0],k,True)
-                for t in range(12):
-                    feat[t] = raga_feat[t, (t + k) % 12, :, :]
-            else:
-                raga_feat = data_utils.get_raga_feat(pitches[0],k,False)
-                feat = np.concatenate([raga_feat[k - 12, :k - 12, :, :], raga_feat[k - 12, k - 12 + 1:, :, :]], axis=0)
+        pred_proba = raga_feature.get_raga_feat_and_predict(self.knn_models, pitchvalue_prob, len(self.raga_list))
+        pred_proba = pred_proba.T  # (n_labels, 25)
 
-            pr = v*knn_model.predict_proba(feat.reshape(1,-1))
-            pred_raga+=pr
-
-        pred_raga = np.argmax(pred_raga[0])
-        pred_raga = self.raga_list[pred_raga]
-
+        models_weights = np.expand_dims(self.models_weights, 1)
+        y_pred = np.matmul(pred_proba, models_weights)[:,0]
+        y_pred = np.argmax(y_pred, 0)
+        pred_raga = self.raga_list[y_pred]
         return tonic_12, pred_raga
 
     def get_raga_list(self, raga_config, tradition):
@@ -618,4 +579,3 @@ class CreToRa:
             imwrite(plot_file, (255 * image).astype(np.uint8))
             if verbose:
                 print("CREPE: Saved the salience plot at {}".format(plot_file))
-
