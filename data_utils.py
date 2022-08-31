@@ -68,7 +68,7 @@ def get_cqt(audio, sr=16000):
     return c_cqt
 
 def get_hist_cqt(audio, pitches):
-    pitches = pitches[0]
+    pitches = pitches
     cqt = get_cqt(audio)[0]
     pitches_mean = np.mean(pitches,0)
     pitches_std = np.std(pitches, 0)
@@ -76,6 +76,7 @@ def get_hist_cqt(audio, pitches):
     cqt_std = np.std(cqt, 0)
     cqt_mean = np.roll(cqt_mean, 3, axis=-1)
     cqt_std = np.roll(cqt_std, 3, axis=-1)
+
     hist_cqt = np.stack([stadardize(pitches_mean), stadardize(pitches_std), stadardize(cqt_mean), stadardize(cqt_std)],-1)
     hist_cqt = np.expand_dims(hist_cqt,0)
     return hist_cqt
