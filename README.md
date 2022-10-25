@@ -1,4 +1,4 @@
-# Sequential Pitch Distributions For Raga Detection Using KNN
+# Raga Detection Using Machine Learning
 This repository contains code for an end to end model for raga and tonic identification on audio samples
 
 Note: This repository currently only contains inference code, the training code and lots of experimental code can be accessed here: https://github.com/VishwaasHegde/E2ERaga
@@ -45,17 +45,10 @@ Steps to run:
 
 Demo videos:
 
-## Live Raga Prediction for Raga: Miyan Malhar
+## Live Raga Prediction
 
-(Click will redirect to youtube)
+[![IMAGE ALT TEXT HERE]([https://img.youtube.com/vi/GC1MyaENUOc/0.jpg)](https://www.youtube.com/watch?v=GC1MyaENUO](https://www.youtube.com/watch?v=XK5KPd5_tCw&t=286s&ab_channel=VishwaasHegde)c) 
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/GC1MyaENUOc/0.jpg)](https://www.youtube.com/watch?v=GC1MyaENUOc)
-
-
-## Live Raga Prediction for Raga: Des
-
-
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/K4Kv_Pypk1w/0.jpg)](https://www.youtube.com/watch?v=K4Kv_Pypk1w)
 
 
 ### Hindustani Raga Embedding cosine similarity obtained from the model
