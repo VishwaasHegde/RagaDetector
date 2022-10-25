@@ -47,7 +47,7 @@ Demo videos:
 
 ## Live Raga Prediction
 
-[![IMAGE ALT TEXT HERE]([https://img.youtube.com/vi/GC1MyaENUOc/0.jpg)](https://www.youtube.com/watch?v=GC1MyaENUO](https://www.youtube.com/watch?v=XK5KPd5_tCw&t=286s&ab_channel=VishwaasHegde)c) 
+![Demo](https://www.youtube.com/watch?v=XK5KPd5_tCw&t=286s&ab_channel=VishwaasHegde) 
 
 
 
