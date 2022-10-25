@@ -47,9 +47,7 @@ Demo videos:
 
 ## Live Raga Prediction
 
-![Demo](https://www.youtube.com/watch?v=XK5KPd5_tCw&t=286s&ab_channel=VishwaasHegde) 
-
-
+[![Demo](https://img.youtube.com/vi/XK5KPd5_tCw/0.jpg)](https://www.youtube.com/watch?v=XK5KPd5_tCw)
 
 ### Hindustani Raga Embedding cosine similarity obtained from the model
 
