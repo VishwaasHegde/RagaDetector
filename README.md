@@ -4,9 +4,10 @@ This repository contains code for an end to end model for raga and tonic identif
 Note: This repository currently only contains inference code, the training code and lots of experimental code can be accessed here: https://github.com/VishwaasHegde/E2ERaga
 However it is not well maintained.
 
-# A paper on this has been published: https://aimc2023.pubpub.org/pub/j9v30p0j/release/1
-Please cite the below if you are using this for your work:
-Narasinh, V., & Raja, S. (2023). Sequential Pitch Distributions for Raga Detection. AIMC 2023. Retrieved from https://aimc2023.pubpub.org/pub/j9v30p0j
+### A paper on this has been published: https://aimc2023.pubpub.org/pub/j9v30p0j/release/1
+"Please cite the below if you are using this for your work:
+
+Narasinh, V., & Raja, S. (2023). Sequential Pitch Distributions for Raga Detection. AIMC 2023. Retrieved from https://aimc2023.pubpub.org/pub/j9v30p0j"
 
 
 # Getting Started
