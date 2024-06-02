@@ -11,7 +11,7 @@ Narasinh, V., & Raja, S. (2023). Sequential Pitch Distributions for Raga Detecti
 
 
 # Getting Started
-Requires `python==3.6.9`
+Requires `python==3.7.16`
 
 Download and install [Anaconda](https://www.anaconda.com/products/individual) for easier package management
 
@@ -45,7 +45,7 @@ E2ERaga supports recorded audio samples which can be provided at runtime
 Steps to run:
 1. Run the command `python main.py --runtime_file=<audio_file_path> --tradition=<h/c>`
    
-   Example: `python test_sample.py --runtime_file=data/sample_data/Ahira_bhairav_27.wav --tradition=h`
+   Example: `python main.py --runtime_file=data/sample_data/Jog_0.wav --tradition=h`
 3. The model supports wav and mp3 file, with mp3 there will be a delay in converting into wav format internally
 4. After this the raga label and the tonic frequency is outputted
 
