@@ -38,6 +38,7 @@ Steps to run:
 4. Enter accordingly and start recording for `duration` duration
 5. After this the raga label and the tonic is outputted
 6. The tonic can also be optionally given by `--tonic=D` for specify `D` pitch as the tonic.
+7. Recommend the user to provide the tonic explicitly using the '--tonic' whenever possible, as the tonic detection model is not so great
 
 ## File input
 E2ERaga supports recorded audio samples which can be provided at runtime
